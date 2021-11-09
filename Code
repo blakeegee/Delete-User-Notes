@@ -1,0 +1,26 @@
+#Define variables
+$UserNotes = “c:\your\path\toList\ofUserIDs.txt”
+$url_base = ‘https://api-na.hosted.exlibrisgroup.com/almaws/v1/users/’
+$url_params = ‘?user_id_type=all_unique&send_pin_number_letter=false&apikey=’
+$apiKey = ‘yourApiKey’
+$string1 = ‘noteTextThatYouWantToDelete’
+
+#In this example, I was tasked with removing a legacy note (” CL RTRND: 0) that was migrated from Millennium. I set variable $string1 equal to this note text ($string1 = ‘” CL RTRND: 0’). You would set your variable equal to the note text that you are attempting to remove.
+#Run the API
+#Load List of User IDs
+$UserList = Get-Content $UserNotes -ErrorAction SilentlyContinue
+
+#For Each User ID in the list of User IDs
+foreach ($UserId in $UserList) {
+
+#Run Update User Details API to Fetch User XML
+$putUrl = $url_base + $UserId + $url_params + $apiKey
+[xml]$xml = (New-Object System.Net.WebClient).DownloadString(“$putUrl”)
+
+#Identify the note text and then delete the node that contains it
+$node = $xml.SelectSingleNode(“//user_note[note_text=’$string1′]”)
+[Void]$node.ParentNode.RemoveChild($node)
+
+#PUT the user XML back into Alma without the note node
+$Response = Invoke-WebRequest -Uri $putUrl -Method PUT -Body $xml -ContentType “application/xml”
+}
